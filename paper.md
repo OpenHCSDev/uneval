@@ -1,5 +1,5 @@
 ---
-title: 'uneval: Declarative Python Source Serialization with Automatic Import Resolution'
+title: 'uneval: Python Source Code as a Serialization Format'
 tags:
   - Python
   - serialization
@@ -19,16 +19,10 @@ bibliography: paper.bib
 
 # Summary
 
-`uneval` converts in-memory Python objects into executable Python source code with correct imports. Given a dataclass with nested Enums, Paths, and callables, `uneval` produces a complete Python script:
+`uneval` serializes Python objects to executable Python source code. The output includes correct imports, handles name collisions via aliasing, and can be `exec()`'d to recreate the original object:
 
 ```python
-# Input: in-memory object
-config = PipelineConfig(
-    path_planning=PathPlanningConfig(output_dir_suffix="_custom"),
-    dtype=DtypeConversion.PRESERVE_INPUT,
-)
-
-# Output: executable Python source
+# In-memory object → executable source with imports
 from openhcs.constants import DtypeConversion
 from openhcs.core.config import PathPlanningConfig, PipelineConfig
 
@@ -38,27 +32,45 @@ config = PipelineConfig(
 )
 ```
 
-The output is diffable, reviewable, and can be `exec()`'d to recreate the original object. This enables round-trip editing: a GUI serializes configuration to Python, users edit the code manually, then reload it into the GUI.
+The key insight: **Python source code is a serialization format.** Rather than inventing a format and writing loaders, `uneval` emits code that Python itself interprets. The import system becomes the deserializer.
 
 # Statement of Need
 
-Binary serializers like `pickle` [@pickle] and `dill` [@dill] are compact but opaque and break across Python versions. JSON/YAML lose type information and require custom loaders. `repr()` produces partial code without imports. None handle name collisions (e.g., two classes named `Config` from different modules).
+Serialization formats occupy a spectrum:
 
-`uneval` addresses these gaps with a two-pass algorithm:
+| Format | Diffable | Inspectable | Editable | Type-preserving | Cross-version |
+|--------|:--------:|:-----------:|:--------:|:---------------:|:-------------:|
+| pickle | ✗ | ✗ | ✗ | ✓ | ✗ |
+| JSON/YAML | ✓ | ✓ | ✓ | ✗ | ✓ |
+| Python source | ✓ | ✓ | ✓ | ✓ | ✓ |
 
-1. **Format pass**: Traverse the object, collecting code fragments and required imports
-2. **Import resolution**: Detect collisions, generate aliases (e.g., `from module_a import Config as Config_a`)
-3. **Regeneration pass**: Re-format with resolved aliases to produce final code
+Binary formats like `pickle` [@pickle] cannot be diffed, inspected, or edited without execution. Text formats like JSON lose type information—an Enum becomes a string, a Path becomes a string, a callable cannot be represented. `repr()` produces code fragments but not complete programs.
 
-This two-pass design is essential—import aliases cannot be determined until all types are visited.
+Python source code has all desired properties simultaneously: it is diffable (text), inspectable (readable), editable (valid syntax), type-preserving (Enums, Paths, callables serialize as themselves), and cross-version stable (if the code runs, deserialization succeeded).
+
+The challenge is generating *complete* source—not just expressions, but the imports required to make those expressions executable. This requires solving import collisions: two classes named `Config` from different modules cannot both be imported without aliasing.
 
 # State of the Field
 
-The standard library `pickle` [@pickle] and `dill` [@dill] serialize to binary. `cloudpickle` [@cloudpickle] handles dynamic functions but remains non-diffable. Dataclasses [@pep557] simplify structured data but provide no code generation. `uneval` complements these by emitting executable source with deterministic imports.
+`pickle` [@pickle], `dill` [@dill], and `cloudpickle` [@cloudpickle] serialize to opaque binary. `repr()` and `ast.unparse` [@ast] produce code fragments without imports. No existing tool produces complete, executable Python source with automatic import resolution and collision handling.
 
 # Software Design
 
-The architecture uses a pluggable formatter registry with auto-registration:
+## Two-Pass Algorithm
+
+Generating executable source requires knowing import aliases before emitting code. But aliases depend on detecting collisions, which requires visiting all types first. This creates a dependency: code generation requires alias resolution, but alias resolution requires traversing the object graph.
+
+`uneval` solves this with two passes:
+
+1. **Collection pass**: Traverse the object, emit code fragments, collect `(module, name)` import pairs
+2. **Resolution**: Detect collisions (same name, different modules), generate deterministic aliases
+3. **Regeneration pass**: Re-traverse with resolved `name_mappings`, emit final code
+
+This is not an optimization—it is structurally necessary. A single-pass algorithm cannot know whether `Config` needs aliasing until it has seen all types that might also be named `Config`.
+
+## Extensible Formatter Registry
+
+Each type maps to a `SourceFormatter` that emits a `SourceFragment(code, imports)`. Formatters register via `__init_subclass__`—defining a formatter class automatically adds it to the registry:
 
 ```python
 class EnumFormatter(SourceFormatter):
@@ -74,23 +86,15 @@ class EnumFormatter(SourceFormatter):
         return SourceFragment(f"{name}.{value.name}", frozenset([import_pair]))
 ```
 
-Formatters register themselves via `__init_subclass__`—no manual registry updates required. Adding support for a domain type requires only defining a new formatter class.
+Priority-based dispatch selects the most specific formatter. Domain extensions add formatters without modifying core code.
 
-**Clean mode** omits fields matching defaults, producing concise output. **Explicit mode** includes all fields for complete reproducibility.
-
-Key components:
-
-- `SourceFragment(code, imports)`: atomic serialization result
-- `FormatContext`: tracks indentation, clean mode, and resolved name mappings
-- `SourceFormatter`: ABC with priority-based selection and auto-registration
-- `resolve_imports()`: deterministic collision handling via aliasing
-- Helper nodes (`Assignment`, `CodeBlock`, `Comment`, `BlankLine`) for composing scripts
+**Clean mode** omits fields matching defaults; **explicit mode** includes all fields for complete reproducibility.
 
 # Research Impact Statement
 
 `uneval` powers code-based serialization in OpenHCS [@openhcs], enabling:
 
-- **GUI round-trip editing**: Pipeline Editor serializes steps to Python; users edit code directly; changes reload into the GUI via `pyqt-formgen` [@pyqtformgen]
+- **GUI round-trip editing**: Pipeline Editor serializes steps to Python; users edit code directly; changes reload into the GUI via `pyqt-reactor` [@pyqtreactor]
 - **Remote execution**: ZMQ clients serialize pipeline configurations as Python code, avoiding pickle versioning issues across nodes
 - **Reproducibility**: Pipeline scripts are human-readable records of exact processing parameters
 
