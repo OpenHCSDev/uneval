@@ -68,6 +68,36 @@ Generating executable source requires knowing import aliases before emitting cod
 
 This is not an optimization—it is structurally necessary. A single-pass algorithm cannot know whether `Config` needs aliasing until it has seen all types that might also be named `Config`.
 
+**Example**: Consider a configuration object with two fields:
+```python
+config = PipelineConfig(
+    path_planning=PathPlanningConfig(...),
+    dtype=DtypeConversion.PRESERVE_INPUT,
+)
+```
+
+The first pass collects:
+- `(openhcs.core.config, PipelineConfig)`
+- `(openhcs.core.config, PathPlanningConfig)`
+- `(openhcs.constants, DtypeConversion)`
+
+No collisions detected. The second pass emits:
+```python
+from openhcs.core.config import PipelineConfig, PathPlanningConfig
+from openhcs.constants import DtypeConversion
+
+config = PipelineConfig(
+    path_planning=PathPlanningConfig(...),
+    dtype=DtypeConversion.PRESERVE_INPUT,
+)
+```
+
+If the object also contained a `PathPlanningConfig` from a different module (e.g., `custom_config.PathPlanningConfig`), the resolution pass would detect the collision and generate aliases:
+```python
+from openhcs.core.config import PathPlanningConfig as PathPlanningConfig_1
+from custom_config import PathPlanningConfig as PathPlanningConfig_2
+```
+
 ## Extensible Formatter Registry
 
 Each type maps to a `SourceFormatter` that emits a `SourceFragment(code, imports)`. Formatters register via `__init_subclass__`—defining a formatter class automatically adds it to the registry:
