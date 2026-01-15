@@ -90,11 +90,15 @@ Key components:
 
 `uneval` powers code-based serialization in OpenHCS [@openhcs], enabling:
 
-- **GUI round-trip editing**: Pipeline Editor serializes steps to Python; users edit code directly; changes reload into the GUI
+- **GUI round-trip editing**: Pipeline Editor serializes steps to Python; users edit code directly; changes reload into the GUI via `pyqt-formgen` [@pyqtformgen]
 - **Remote execution**: ZMQ clients serialize pipeline configurations as Python code, avoiding pickle versioning issues across nodes
 - **Reproducibility**: Pipeline scripts are human-readable records of exact processing parameters
 
-The formatter registry makes domain extensions trivial—OpenHCS adds formatters for `FunctionStep`, `FunctionPattern`, and custom dataclasses without modifying uneval's core.
+The formatter registry enables domain extensions without modifying uneval's core. OpenHCS adds formatters for:
+
+- **FunctionStep**: Pipeline step objects with function patterns and processing configuration
+- **Virtual module rewrites**: External library functions (e.g., `skimage.filters.gaussian`) are rewritten to virtual module paths (`openhcs.skimage.filters.gaussian`) that include OpenHCS decorators
+- **Lazy dataclass bypass**: For dataclasses with `__getattribute__` interception (used for hierarchical config inheritance), formatters use `object.__getattribute__` to access raw field values without triggering lazy resolution
 
 # AI Usage Disclosure
 
