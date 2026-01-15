@@ -97,8 +97,31 @@ Key components:
 The formatter registry enables domain extensions without modifying uneval's core. OpenHCS adds formatters for:
 
 - **FunctionStep**: Pipeline step objects with function patterns and processing configuration
-- **Virtual module rewrites**: External library functions (e.g., `skimage.filters.gaussian`) are rewritten to virtual module paths (`openhcs.skimage.filters.gaussian`) that include OpenHCS decorators
-- **Lazy dataclass bypass**: For dataclasses with `__getattribute__` interception (used for hierarchical config inheritance), formatters use `object.__getattribute__` to access raw field values without triggering lazy resolution
+- **Virtual module rewrites**: External library functions are rewritten to virtual module paths that include OpenHCS decorators:
+
+```python
+class OpenHCSCallableFormatter(SourceFormatter):
+    def format(self, value: Any, context: FormatContext) -> SourceFragment:
+        module = getattr(value, "__module__", None)
+        name = getattr(value, "__name__", None)
+        # Rewrite skimage.filters.gaussian → openhcs.skimage.filters.gaussian
+        if _is_external_registered_function(value):
+            module = f"openhcs.{module}"
+        return SourceFragment(name, frozenset([(module, name)]))
+```
+
+- **Lazy dataclass bypass**: For dataclasses with `__getattribute__` interception (used for hierarchical config inheritance), formatters use `object.__getattribute__` to access raw field values without triggering lazy resolution:
+
+```python
+# In DataclassFormatter
+if hasattr(instance, "_resolve_field_value"):
+    # Bypass __getattribute__ to get raw None vs concrete value
+    current_value = object.__getattribute__(instance, field_name)
+else:
+    current_value = getattr(instance, field_name)
+```
+
+This distinguishes explicitly-set values from inherited ones during serialization.
 
 # AI Usage Disclosure
 
