@@ -129,6 +129,6 @@ Generative AI assisted with drafting documentation. All content was reviewed and
 
 # Acknowledgements
 
-This work was supported by [TODO: Add funding sources].
+This work was supported in part by the Fournier lab at the Montreal Neurological Institute, McGill University.
 
 # References
