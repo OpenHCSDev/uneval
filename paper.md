@@ -19,52 +19,82 @@ bibliography: paper.bib
 
 # Summary
 
-`uneval` converts in-memory Python objects into executable Python source code with correct imports. It targets configuration, reproducibility, and round-trip editing workflows where human-readable code is preferable to binary serialization. Given a Python object, `uneval` produces a full source fragment and the imports it requires, resolving name collisions in a second pass:
+`uneval` converts in-memory Python objects into executable Python source code with correct imports. Given a dataclass with nested Enums, Paths, and callables, `uneval` produces a complete Python script:
 
 ```python
-from uneval import Assignment, generate_python_source
+# Input: in-memory object
+config = PipelineConfig(
+    path_planning=PathPlanningConfig(output_dir_suffix="_custom"),
+    dtype=DtypeConversion.PRESERVE_INPUT,
+)
 
-code = generate_python_source(Assignment("config", config_obj), clean_mode=True)
+# Output: executable Python source
+from openhcs.constants import DtypeConversion
+from openhcs.core.config import PathPlanningConfig, PipelineConfig
+
+config = PipelineConfig(
+    path_planning=PathPlanningConfig(output_dir_suffix="_custom"),
+    dtype=DtypeConversion.PRESERVE_INPUT,
+)
 ```
 
-This enables tools to serialize complex nested structures (e.g., dataclasses with Enums and Paths) into editable Python scripts that can be executed to recreate the original objects.
+The output is diffable, reviewable, and can be `exec()`'d to recreate the original object. This enables round-trip editing: a GUI serializes configuration to Python, users edit the code manually, then reload it into the GUI.
 
 # Statement of Need
 
-Binary serializers such as `pickle` and `dill` [@pickle; @dill] are compact but opaque and can break across Python versions or library changes. Text-based formats (JSON/YAML) often lose type information and require custom loaders. Existing approaches like `repr()` or dataclass-specific helpers produce partial code, but do not track required imports, resolve name collisions, or support extension to arbitrary types.
+Binary serializers like `pickle` [@pickle] and `dill` [@dill] are compact but opaque and break across Python versions. JSON/YAML lose type information and require custom loaders. `repr()` produces partial code without imports. None handle name collisions (e.g., two classes named `Config` from different modules).
 
-`uneval` addresses these gaps by:
+`uneval` addresses these gaps with a two-pass algorithm:
 
-- Generating **valid Python source** with imports for all referenced types
-- Providing a **pluggable formatter registry** to support domain-specific objects
-- Supporting **clean vs. explicit** output modes for concise or fully-specified configs
-- Producing code that is **diffable, reviewable, and executable**
+1. **Format pass**: Traverse the object, collecting code fragments and required imports
+2. **Import resolution**: Detect collisions, generate aliases (e.g., `from module_a import Config as Config_a`)
+3. **Regeneration pass**: Re-format with resolved aliases to produce final code
+
+This two-pass design is essential—import aliases cannot be determined until all types are visited.
 
 # State of the Field
 
-The standard library `pickle` module [@pickle] and `dill` [@dill] serialize Python objects into binary formats. `cloudpickle` [@cloudpickle] improves support for dynamically defined functions but remains binary and non-diffable. Dataclasses [@pep557] simplify structured data but do not provide code generation with import management. `uneval` complements these tools by emitting executable Python source with deterministic imports and a declarative extension mechanism.
+The standard library `pickle` [@pickle] and `dill` [@dill] serialize to binary. `cloudpickle` [@cloudpickle] handles dynamic functions but remains non-diffable. Dataclasses [@pep557] simplify structured data but provide no code generation. `uneval` complements these by emitting executable source with deterministic imports.
 
 # Software Design
 
-`uneval` implements a two-pass source serialization pipeline:
+The architecture uses a pluggable formatter registry with auto-registration:
 
-1. **Format pass**: a `SourceFormatter` registry selects a formatter for each value and emits a `SourceFragment` containing code and required imports.
-2. **Import resolution**: collisions are detected and resolved by aliasing, producing a name mapping.
-3. **Regeneration pass**: formatters re-run with resolved names to produce final code.
+```python
+class EnumFormatter(SourceFormatter):
+    priority = 70
+
+    def can_format(self, value: Any) -> bool:
+        return isinstance(value, Enum)
+
+    def format(self, value: Enum, context: FormatContext) -> SourceFragment:
+        cls = value.__class__
+        import_pair = (cls.__module__, cls.__name__)
+        name = context.name_mappings.get(import_pair, cls.__name__)
+        return SourceFragment(f"{name}.{value.name}", frozenset([import_pair]))
+```
+
+Formatters register themselves via `__init_subclass__`—no manual registry updates required. Adding support for a domain type requires only defining a new formatter class.
+
+**Clean mode** omits fields matching defaults, producing concise output. **Explicit mode** includes all fields for complete reproducibility.
 
 Key components:
 
 - `SourceFragment(code, imports)`: atomic serialization result
 - `FormatContext`: tracks indentation, clean mode, and resolved name mappings
-- `SourceFormatter`: ABC with auto-registration via `__init_subclass__`
-- `resolve_imports()`: deterministic collision handling and import line generation
-- Helper nodes (`Assignment`, `CodeBlock`, `Comment`, `BlankLine`) for composing full scripts
-
-The registry makes it trivial to extend `uneval` for domain objects by adding a formatter class.
+- `SourceFormatter`: ABC with priority-based selection and auto-registration
+- `resolve_imports()`: deterministic collision handling via aliasing
+- Helper nodes (`Assignment`, `CodeBlock`, `Comment`, `BlankLine`) for composing scripts
 
 # Research Impact Statement
 
-`uneval` powers code-based serialization in OpenHCS, enabling UI editors and remote execution to round-trip complex pipeline objects through editable Python scripts. The declarative formatter approach eliminated thousands of lines of repetitive code generation logic in favor of a small, extensible core. The library is applicable to any Python project that needs readable, version-resilient serialization with accurate imports.
+`uneval` powers code-based serialization in OpenHCS [@openhcs], enabling:
+
+- **GUI round-trip editing**: Pipeline Editor serializes steps to Python; users edit code directly; changes reload into the GUI
+- **Remote execution**: ZMQ clients serialize pipeline configurations as Python code, avoiding pickle versioning issues across nodes
+- **Reproducibility**: Pipeline scripts are human-readable records of exact processing parameters
+
+The formatter registry makes domain extensions trivial—OpenHCS adds formatters for `FunctionStep`, `FunctionPattern`, and custom dataclasses without modifying uneval's core.
 
 # AI Usage Disclosure
 
