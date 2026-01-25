@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/uneval
+      url: https://pypi.org/p/unevalpy
 
     steps:
       - name: Checkout code
