@@ -1,2 +1,2 @@
-"""Tests for uneval package."""
+"""Tests for pycodify package."""
 

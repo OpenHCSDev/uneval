@@ -1,11 +1,11 @@
-# uneval
+# pycodify
 
 Python source code as a serialization format with automatic import resolution.
 
 ## Quick Start
 
 ```python
-from uneval import Assignment, generate_python_source
+from pycodify import Assignment, generate_python_source
 from dataclasses import dataclass
 
 @dataclass
@@ -41,12 +41,12 @@ Binary formats like `pickle` cannot be diffed, inspected, or edited. Text format
 
 ## Documentation
 
-Full documentation available at [uneval.readthedocs.io](https://uneval.readthedocs.io)
+Full documentation available at [pycodify.readthedocs.io](https://pycodify.readthedocs.io)
 
 ## Installation
 
 ```bash
-pip install uneval
+pip install pycodify
 ```
 
 ## License

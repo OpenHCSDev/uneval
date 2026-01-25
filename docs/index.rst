@@ -1,16 +1,16 @@
-uneval Documentation
-====================
+pycodify Documentation
+======================
 
-**uneval** serializes Python objects to executable Python source code with automatic import resolution.
+**pycodify** serializes Python objects to executable Python source code with automatic import resolution.
 
-The key insight: **Python source code is a serialization format.** Rather than inventing a format and writing loaders, uneval emits code that Python itself interprets. The import system becomes the deserializer.
+The key insight: **Python source code is a serialization format.** Rather than inventing a format and writing loaders, pycodify emits code that Python itself interprets. The import system becomes the deserializer.
 
 Quick Start
 -----------
 
 .. code-block:: python
 
-   from uneval import Assignment, generate_python_source
+   from pycodify import Assignment, generate_python_source
    from dataclasses import dataclass
 
    @dataclass
@@ -59,9 +59,9 @@ API Reference
 .. autosummary::
    :toctree: _autosummary
 
-   uneval.core
-   uneval.formatters
-   uneval.imports
+   pycodify.core
+   pycodify.formatters
+   pycodify.imports
 
 Indices and Tables
 ------------------

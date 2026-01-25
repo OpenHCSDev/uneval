@@ -1,9 +1,9 @@
-"""Tests for uneval.core module."""
+"""Tests for pycodify.core module."""
 
 import pytest
 from dataclasses import dataclass
 from enum import Enum
-from uneval import Assignment, generate_python_source
+from pycodify import Assignment, generate_python_source
 
 
 class Color(Enum):

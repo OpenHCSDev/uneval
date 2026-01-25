@@ -4,11 +4,11 @@ Usage Guide
 Basic Usage
 -----------
 
-The simplest way to use uneval is to generate source code for an object:
+The simplest way to use pycodify is to generate source code for an object:
 
 .. code-block:: python
 
-   from uneval import Assignment, generate_python_source
+   from pycodify import Assignment, generate_python_source
    from dataclasses import dataclass
 
    @dataclass
@@ -77,14 +77,14 @@ Enums are serialized with their full qualified names:
 Handling Import Collisions
 ---------------------------
 
-When multiple modules have classes with the same name, uneval automatically aliases them:
+When multiple modules have classes with the same name, pycodify automatically aliases them:
 
 .. code-block:: python
 
    from module_a import Config as ConfigA
    from module_b import Config as ConfigB
 
-   # uneval detects the collision and generates:
+   # pycodify detects the collision and generates:
    # from module_a import Config as Config_1
    # from module_b import Config as Config_2
    # obj = Config_1(...)

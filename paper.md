@@ -1,5 +1,5 @@
 ---
-title: 'uneval: Python Source Code as a Serialization Format'
+title: 'pycodify: Python Source Code as a Serialization Format'
 tags:
   - Python
   - serialization
@@ -19,7 +19,7 @@ bibliography: paper.bib
 
 # Summary
 
-`uneval` serializes Python objects to executable Python source code. The output includes correct imports, handles name collisions via aliasing, and can be `exec()`'d to recreate the original object:
+`pycodify` serializes Python objects to executable Python source code. The output includes correct imports, handles name collisions via aliasing, and can be `exec()`'d to recreate the original object:
 
 ```python
 # In-memory object → executable source with imports
@@ -32,7 +32,7 @@ config = PipelineConfig(
 )
 ```
 
-The key insight: **Python source code is a serialization format.** Rather than inventing a format and writing loaders, `uneval` emits code that Python itself interprets. The import system becomes the deserializer.
+The key insight: **Python source code is a serialization format.** Rather than inventing a format and writing loaders, `pycodify` emits code that Python itself interprets. The import system becomes the deserializer.
 
 # Statement of Need
 
@@ -60,7 +60,7 @@ The challenge is generating *complete* source—not just expressions, but the im
 
 Generating executable source requires knowing import aliases before emitting code. But aliases depend on detecting collisions, which requires visiting all types first. This creates a dependency: code generation requires alias resolution, but alias resolution requires traversing the object graph.
 
-`uneval` solves this with two passes:
+`pycodify` solves this with two passes:
 
 1. **Collection pass**: Traverse the object, emit code fragments, collect `(module, name)` import pairs
 2. **Resolution**: Detect collisions (same name, different modules), generate deterministic aliases
@@ -122,13 +122,13 @@ Priority-based dispatch selects the most specific formatter. Domain extensions a
 
 # Research Impact Statement
 
-`uneval` powers code-based serialization in OpenHCS [@openhcs], enabling:
+`pycodify` powers code-based serialization in OpenHCS [@openhcs], enabling:
 
 - **GUI round-trip editing**: Pipeline Editor serializes steps to Python; users edit code directly; changes reload into the GUI via `pyqt-reactor` [@pyqtreactor]
 - **Remote execution**: ZMQ clients serialize pipeline configurations as Python code, avoiding pickle versioning issues across nodes
 - **Reproducibility**: Pipeline scripts are human-readable records of exact processing parameters
 
-The formatter registry enables domain extensions without modifying uneval's core. OpenHCS adds formatters for:
+The formatter registry enables domain extensions without modifying pycodify's core. OpenHCS adds formatters for:
 
 - **FunctionStep**: Pipeline step objects with function patterns and processing configuration
 - **Virtual module rewrites**: External library functions are rewritten to virtual module paths that include OpenHCS decorators:

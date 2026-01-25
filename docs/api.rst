@@ -4,7 +4,7 @@ API Reference
 Core API
 --------
 
-.. automodule:: uneval.core
+.. automodule:: pycodify.core
    :members:
    :undoc-members:
    :show-inheritance:
@@ -12,7 +12,7 @@ Core API
 Formatters
 ----------
 
-.. automodule:: uneval.formatters
+.. automodule:: pycodify.formatters
    :members:
    :undoc-members:
    :show-inheritance:
@@ -20,7 +20,7 @@ Formatters
 Import Resolution
 -----------------
 
-.. automodule:: uneval.imports
+.. automodule:: pycodify.imports
    :members:
    :undoc-members:
    :show-inheritance:
@@ -43,7 +43,7 @@ Main Functions
 
    .. code-block:: python
 
-      from uneval import Assignment, generate_python_source
+      from pycodify import Assignment, generate_python_source
       from dataclasses import dataclass
 
       @dataclass

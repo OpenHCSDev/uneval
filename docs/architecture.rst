@@ -6,7 +6,7 @@ Two-Pass Algorithm
 
 Generating executable source requires knowing import aliases before emitting code. But aliases depend on detecting collisions, which requires visiting all types first. This creates a dependency: code generation requires alias resolution, but alias resolution requires traversing the object graph.
 
-uneval solves this with two passes:
+pycodify solves this with two passes:
 
 1. **Collection Pass**: Traverse the object, emit code fragments, collect ``(module, name)`` import pairs
 2. **Resolution**: Detect collisions (same name, different modules), generate deterministic aliases

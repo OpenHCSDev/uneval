@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "unevalpy"
+name = "pycodify"
 version = "0.1.0"
 description = "Python source code as a serialization format with automatic import resolution"
 authors = [{name = "Tristan Simas", email = "tristan.simas@mail.mcgill.ca"}]
@@ -41,20 +41,20 @@ docs = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/OpenHCSDev/uneval"
-Documentation = "https://uneval.readthedocs.io"
-Repository = "https://github.com/OpenHCSDev/uneval"
-Issues = "https://github.com/OpenHCSDev/uneval/issues"
+Homepage = "https://github.com/OpenHCSDev/pycodify"
+Documentation = "https://pycodify.readthedocs.io"
+Repository = "https://github.com/OpenHCSDev/pycodify"
+Issues = "https://github.com/OpenHCSDev/pycodify/issues"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/uneval"]
+packages = ["src/pycodify"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "--cov=uneval --cov-report=term-missing --cov-report=html"
+addopts = "--cov=pycodify --cov-report=term-missing --cov-report=html"
 
 [tool.black]
 line-length = 100
