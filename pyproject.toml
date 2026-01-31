@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pycodify"
-version = "0.1.1"
+version = "0.1.2"
 description = "Python source code as a serialization format with automatic import resolution"
 authors = [{name = "Tristan Simas", email = "tristan.simas@mail.mcgill.ca"}]
 license = {text = "MIT"}
@@ -62,11 +62,11 @@ target-version = ["py310", "py311", "py312", "py313"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py310"
+target-version = "0.1.2"
 select = ["E", "F", "I", "N", "W", "UP"]
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "0.1.2"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
